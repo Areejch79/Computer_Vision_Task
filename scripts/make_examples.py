@@ -34,6 +34,7 @@ def main() -> None:
         preds[preds.outcome == "TP"].sort_values("p_defective").head(1),  # least confident hit
         preds[preds.outcome == "FN"].head(2),
         preds[preds.outcome == "FP"].head(2),
+        preds[preds.outcome == "TN"].sort_values("p_defective", ascending=False).head(1),  # least confident normal
     ]).drop_duplicates("path")
     img_dir = args.out / "images"
     shutil.rmtree(img_dir, ignore_errors=True)
@@ -53,17 +54,37 @@ def main() -> None:
             body.pop("inference_ms", None)  # machine dependent; keep the committed file stable
             rows.append({"image": str(dst.relative_to(args.out)), "ground_truth": r.class_name,
                          "outcome": r.outcome, "response": body})
+        # Synthetic degraded inputs: demonstrate the image-quality gate (see README "Error analysis").
+        from PIL import Image, ImageEnhance, ImageFilter
+
+        src = Path(picks[picks.class_name == "defective"].iloc[0].path)
+        degraded = {
+            "defective__blurred_r3.png": Image.open(src).convert("L").filter(ImageFilter.GaussianBlur(3)),
+            "defective__underexposed_x0.4.png": ImageEnhance.Brightness(Image.open(src).convert("L")).enhance(0.4),
+        }
+        for name, img in degraded.items():
+            dst = img_dir / name
+            img.save(dst)
+            with open(dst, "rb") as f:
+                resp = client.post("/predict", files={"file": (dst.name, f, "image/png")},
+                                   headers={"x-request-id": f"example-{len(rows):02d}"})
+            body = resp.json()
+            body.pop("inference_ms", None)
+            rows.append({"image": str(dst.relative_to(args.out)), "ground_truth": "defective",
+                         "outcome": f"synthetic degradation of {src.name}", "response": body})
     (args.out / "predictions.json").write_text(json.dumps(rows, indent=2))
     lines = ["# Example predictions", "",
              "Images are from the held-out **test split**. Responses were produced by `POST /predict` of the "
              "API with the shipped model (`scripts/make_examples.py`).", "",
-             "| image | ground truth | predicted | confidence | P(defective) | requires_review | outcome |",
-             "|---|---|---|---|---|---|---|"]
+             "| image | ground truth | predicted | confidence | P(defective) | requires_review | quality_warnings "
+             "| outcome |",
+             "|---|---|---|---|---|---|---|---|"]
     for r in rows:
         b = r["response"]
         lines.append(f"| ![]({r['image']}) `{Path(r['image']).name}` | {r['ground_truth']} "
                      f"| **{b['predicted_class']}** | {b['confidence']:.4f} | {b['defect_probability']:.4f} "
-                     f"| {b['requires_review']} | {r['outcome']} |")
+                     f"| {b['requires_review']} | {'; '.join(b.get('quality_warnings', [])) or '–'} "
+                     f"| {r['outcome']} |")
     (args.out / "README.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 

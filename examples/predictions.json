@@ -1,0 +1,167 @@
+[
+  {
+    "image": "images/normal__cast_ok_0_1362.jpeg",
+    "ground_truth": "normal",
+    "outcome": "TN",
+    "response": {
+      "request_id": "example-00",
+      "filename": "normal__cast_ok_0_1362.jpeg",
+      "predicted_class": "normal",
+      "confidence": 0.996558,
+      "probabilities": {
+        "normal": 0.996558,
+        "defective": 0.003442
+      },
+      "defect_probability": 0.003442,
+      "threshold": 0.461697,
+      "requires_review": false,
+      "quality_warnings": [],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/normal__cast_ok_0_8974.jpeg",
+    "ground_truth": "normal",
+    "outcome": "TN",
+    "response": {
+      "request_id": "example-01",
+      "filename": "normal__cast_ok_0_8974.jpeg",
+      "predicted_class": "normal",
+      "confidence": 0.993908,
+      "probabilities": {
+        "normal": 0.993908,
+        "defective": 0.006092
+      },
+      "defect_probability": 0.006092,
+      "threshold": 0.461697,
+      "requires_review": false,
+      "quality_warnings": [],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/defective__cast_def_0_6112.jpeg",
+    "ground_truth": "defective",
+    "outcome": "TP",
+    "response": {
+      "request_id": "example-02",
+      "filename": "defective__cast_def_0_6112.jpeg",
+      "predicted_class": "defective",
+      "confidence": 0.980607,
+      "probabilities": {
+        "normal": 0.019393,
+        "defective": 0.980607
+      },
+      "defect_probability": 0.980607,
+      "threshold": 0.461697,
+      "requires_review": false,
+      "quality_warnings": [],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/defective__cast_def_0_2950.jpeg",
+    "ground_truth": "defective",
+    "outcome": "TP",
+    "response": {
+      "request_id": "example-03",
+      "filename": "defective__cast_def_0_2950.jpeg",
+      "predicted_class": "defective",
+      "confidence": 0.977555,
+      "probabilities": {
+        "normal": 0.022445,
+        "defective": 0.977555
+      },
+      "defect_probability": 0.977555,
+      "threshold": 0.461697,
+      "requires_review": false,
+      "quality_warnings": [],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/defective__cast_def_0_1139.jpeg",
+    "ground_truth": "defective",
+    "outcome": "TP",
+    "response": {
+      "request_id": "example-04",
+      "filename": "defective__cast_def_0_1139.jpeg",
+      "predicted_class": "defective",
+      "confidence": 0.905893,
+      "probabilities": {
+        "normal": 0.094107,
+        "defective": 0.905893
+      },
+      "defect_probability": 0.905893,
+      "threshold": 0.461697,
+      "requires_review": false,
+      "quality_warnings": [],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/normal__cast_ok_0_6055.jpeg",
+    "ground_truth": "normal",
+    "outcome": "TN",
+    "response": {
+      "request_id": "example-05",
+      "filename": "normal__cast_ok_0_6055.jpeg",
+      "predicted_class": "normal",
+      "confidence": 0.964201,
+      "probabilities": {
+        "normal": 0.964201,
+        "defective": 0.035799
+      },
+      "defect_probability": 0.035799,
+      "threshold": 0.461697,
+      "requires_review": false,
+      "quality_warnings": [],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/defective__blurred_r3.png",
+    "ground_truth": "defective",
+    "outcome": "synthetic degradation of cast_def_0_6112.jpeg",
+    "response": {
+      "request_id": "example-06",
+      "filename": "defective__blurred_r3.png",
+      "predicted_class": "defective",
+      "confidence": 0.967995,
+      "probabilities": {
+        "normal": 0.032005,
+        "defective": 0.967995
+      },
+      "defect_probability": 0.967995,
+      "threshold": 0.461697,
+      "requires_review": true,
+      "quality_warnings": [
+        "image_blurry (sharpness 17 < 93)"
+      ],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  },
+  {
+    "image": "images/defective__underexposed_x0.4.png",
+    "ground_truth": "defective",
+    "outcome": "synthetic degradation of cast_def_0_6112.jpeg",
+    "response": {
+      "request_id": "example-07",
+      "filename": "defective__underexposed_x0.4.png",
+      "predicted_class": "defective",
+      "confidence": 0.939617,
+      "probabilities": {
+        "normal": 0.060383,
+        "defective": 0.939617
+      },
+      "defect_probability": 0.939617,
+      "threshold": 0.461697,
+      "requires_review": true,
+      "quality_warnings": [
+        "image_blurry (sharpness 39 < 93)",
+        "exposure_out_of_range (mean 56 not in [107, 181])"
+      ],
+      "model_version": "efficientnet_b0-20261005-f93e5afb"
+    }
+  }
+]

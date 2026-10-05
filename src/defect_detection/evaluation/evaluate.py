@@ -80,6 +80,28 @@ def bootstrap_ci(y: np.ndarray, p: np.ndarray, t: float, n_boot: int = 1000, see
             for k, v in samples.items()}
 
 
+def clopper_pearson(k: int, n: int, alpha: float = 0.05) -> list[float]:
+    """Exact binomial CI. Unlike the bootstrap it stays informative when there are 0 errors:
+    0 misses out of 118 defects still only proves recall >= ~0.97 at 95 % confidence."""
+    from scipy.stats import beta
+
+    if n == 0:
+        return [0.0, 1.0]
+    lo = 0.0 if k == 0 else float(beta.ppf(alpha / 2, k, n - k + 1))
+    hi = 1.0 if k == n else float(beta.ppf(1 - alpha / 2, k + 1, n - k))
+    return [round(lo, 4), round(hi, 4)]
+
+
+def exact_cis(m: dict) -> dict:
+    cm = m["confusion_matrix"]
+    return {
+        "recall": clopper_pearson(cm["tp"], cm["tp"] + cm["fn"]),
+        "specificity": clopper_pearson(cm["tn"], cm["tn"] + cm["fp"]),
+        "precision": clopper_pearson(cm["tp"], cm["tp"] + cm["fp"]),
+        "accuracy": clopper_pearson(cm["tp"] + cm["tn"], m["n"]),
+    }
+
+
 def prevalence_adjusted_precision(m: dict, prevalences=(0.01, 0.05, 0.10)) -> dict:
     """Precision depends on the defect rate; recall and FPR do not.
 
@@ -333,6 +355,7 @@ def evaluate(model_dir: Path, out_dir: Path, splits_csv: Path, checkpoint: Path 
              onnx_filename: str = "model.onnx", skip_robustness: bool = False) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     fig_dir = out_dir / "figures"
+    fig_dir.mkdir(parents=True, exist_ok=True)
     clf = DefectClassifier(model_dir, onnx_filename=onnx_filename)
     t = clf.threshold
     df = load_split(splits_csv, split)
@@ -366,6 +389,7 @@ def evaluate(model_dir: Path, out_dir: Path, splits_csv: Path, checkpoint: Path 
         "metrics_at_tuned_threshold": m_tuned,
         "metrics_at_0.5": m_05,
         "bootstrap_95ci_tuned_threshold": bootstrap_ci(y, p, t),
+        "exact_95ci_tuned_threshold": exact_cis(m_tuned),
         "expected_precision_at_line_prevalence": prevalence_adjusted_precision(m_tuned),
         "threshold_sweep": sweep,
     }
@@ -471,14 +495,16 @@ def render_markdown(r: dict, group_stats: pd.DataFrame) -> str:
         "",
         f"Decision threshold (tuned on validation): **{r['threshold']:.4f}**",
         "",
-        "| metric | value | bootstrap 95% CI |",
-        "|---|---|---|",
+        "| metric | value | exact (Clopper-Pearson) 95% CI | bootstrap 95% CI |",
+        "|---|---|---|---|",
     ]
+    ex = r["exact_95ci_tuned_threshold"]
     for k in ("precision", "recall", "f1", "specificity", "accuracy"):
-        lines.append(f"| {k} | {m[k]:.4f} | {ci[k][0]:.3f} – {ci[k][1]:.3f} |")
+        e = f"{ex[k][0]:.3f} – {ex[k][1]:.3f}" if k in ex else "–"
+        lines.append(f"| {k} | {m[k]:.4f} | {e} | {ci[k][0]:.3f} – {ci[k][1]:.3f} |")
     lines += [
-        f"| ROC-AUC | {m['roc_auc']:.4f} | |",
-        f"| PR-AUC | {m['pr_auc']:.4f} | |",
+        f"| ROC-AUC | {m['roc_auc']:.4f} | | |",
+        f"| PR-AUC | {m['pr_auc']:.4f} | | |",
         "",
         f"Confusion matrix: TN={cm['tn']} FP={cm['fp']} FN={cm['fn']} TP={cm['tp']}",
         "",

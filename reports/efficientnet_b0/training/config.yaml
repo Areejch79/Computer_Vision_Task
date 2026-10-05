@@ -1,0 +1,37 @@
+run_name: efficientnet_b0
+seed: 42
+data:
+  splits_csv: data/splits.csv
+  root: .
+  cache_images: true
+  simulate_defect_prevalence: null
+model:
+  name: efficientnet_b0
+  pretrained: true
+  weights_path: weights/efficientnet_b0_ra-3dd342df.pth
+  drop_rate: 0.3
+preprocess:
+  image_size: 256
+augmentation:
+  crop_scale_min: 0.85
+  brightness: 0.35
+  contrast: 0.35
+  blur_p: 0.2
+  noise_p: 0.2
+  noise_std: 0.03
+imbalance:
+  strategy: weighted_loss
+  target_recall: 0.99
+train:
+  batch_size: 32
+  epochs: 25
+  freeze_epochs: 2
+  lr: 0.001
+  backbone_lr_mult: 0.3
+  weight_decay: 0.0001
+  label_smoothing: 0.05
+  warmup_epochs: 1
+  early_stopping_patience: 7
+  num_workers: 4
+  device: auto
+output_dir: runs

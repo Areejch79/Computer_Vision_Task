@@ -1,0 +1,35 @@
+2026-10-05 07:58:08,827 INFO train: Run dir runs/efficientnet_b0 | device cpu
+2026-10-05 07:58:08,840 INFO train: Train class counts {'normal': 360, 'defective': 546} | val class counts {'normal': 81, 'defective': 117}
+2026-10-05 07:58:08,841 INFO train: Class weights (inverse frequency): [1.2583333253860474, 0.8296703100204468]
+2026-10-05 07:58:08,897 INFO timm.models._builder: Loading pretrained weights from file (weights/efficientnet_b0_ra-3dd342df.pth)
+2026-10-05 07:58:08,935 INFO timm.models._helpers: Loaded  from checkpoint 'weights/efficientnet_b0_ra-3dd342df.pth'
+2026-10-05 07:58:08,942 INFO timm.models._builder: Missing keys (classifier.weight, classifier.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+2026-10-05 07:58:08,944 INFO defect_detection.models: Built efficientnet_b0 (pretrained=True, 4.01M params)
+2026-10-05 07:58:44,553 INFO train: epoch 01 | train_loss 0.5874 | val_loss 0.5236 | val F1 0.8208 P 0.9158 R 0.7436 AUC 0.8819 | 36s
+2026-10-05 07:59:18,522 INFO train: epoch 02 | train_loss 0.5293 | val_loss 0.5206 | val F1 0.7800 P 0.9398 R 0.6667 AUC 0.8853 | 34s
+2026-10-05 07:59:18,557 INFO train: Unfreezing backbone for full fine-tuning
+2026-10-05 08:03:33,958 INFO train: epoch 03 | train_loss 0.4108 | val_loss 0.1317 | val F1 0.9692 P 1.0000 R 0.9402 AUC 0.9845 | 255s
+2026-10-05 08:04:28,552 INFO train: epoch 04 | train_loss 0.1996 | val_loss 0.1086 | val F1 0.9870 P 1.0000 R 0.9744 AUC 0.9907 | 55s
+2026-10-05 08:05:22,535 INFO train: epoch 05 | train_loss 0.1903 | val_loss 0.0759 | val F1 0.9870 P 1.0000 R 0.9744 AUC 0.9948 | 54s
+2026-10-05 08:06:45,594 INFO train: epoch 06 | train_loss 0.1662 | val_loss 0.0879 | val F1 0.9870 P 1.0000 R 0.9744 AUC 0.9991 | 83s
+2026-10-05 08:07:42,811 INFO train: epoch 07 | train_loss 0.1549 | val_loss 0.0696 | val F1 0.9870 P 1.0000 R 0.9744 AUC 0.9997 | 57s
+2026-10-05 08:08:56,773 INFO train: epoch 08 | train_loss 0.1707 | val_loss 0.0452 | val F1 0.9870 P 1.0000 R 0.9744 AUC 1.0000 | 74s
+2026-10-05 08:10:08,929 INFO train: epoch 09 | train_loss 0.1494 | val_loss 0.0645 | val F1 0.9870 P 1.0000 R 0.9744 AUC 1.0000 | 72s
+2026-10-05 08:11:04,441 INFO train: epoch 10 | train_loss 0.1458 | val_loss 0.0501 | val F1 0.9914 P 1.0000 R 0.9829 AUC 1.0000 | 56s
+2026-10-05 08:11:56,914 INFO train: epoch 11 | train_loss 0.1392 | val_loss 0.0415 | val F1 0.9957 P 1.0000 R 0.9915 AUC 1.0000 | 52s
+2026-10-05 08:12:49,973 INFO train: epoch 12 | train_loss 0.1419 | val_loss 0.0406 | val F1 0.9957 P 1.0000 R 0.9915 AUC 1.0000 | 53s
+2026-10-05 08:13:43,219 INFO train: epoch 13 | train_loss 0.1435 | val_loss 0.0444 | val F1 0.9914 P 1.0000 R 0.9829 AUC 1.0000 | 53s
+2026-10-05 08:14:35,815 INFO train: epoch 14 | train_loss 0.1322 | val_loss 0.0377 | val F1 0.9957 P 1.0000 R 0.9915 AUC 1.0000 | 53s
+2026-10-05 08:15:28,314 INFO train: epoch 15 | train_loss 0.1292 | val_loss 0.0318 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 52s
+2026-10-05 08:16:21,864 INFO train: epoch 16 | train_loss 0.1299 | val_loss 0.0342 | val F1 0.9957 P 1.0000 R 0.9915 AUC 1.0000 | 54s
+2026-10-05 08:17:15,873 INFO train: epoch 17 | train_loss 0.1303 | val_loss 0.0311 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 54s
+2026-10-05 08:18:09,070 INFO train: epoch 18 | train_loss 0.1328 | val_loss 0.0325 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 53s
+2026-10-05 08:19:02,453 INFO train: epoch 19 | train_loss 0.1295 | val_loss 0.0298 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 53s
+2026-10-05 08:19:59,886 INFO train: epoch 20 | train_loss 0.1309 | val_loss 0.0293 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 57s
+2026-10-05 08:20:51,847 INFO train: epoch 21 | train_loss 0.1294 | val_loss 0.0294 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 52s
+2026-10-05 08:21:45,189 INFO train: epoch 22 | train_loss 0.1264 | val_loss 0.0302 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 53s
+2026-10-05 08:22:38,107 INFO train: epoch 23 | train_loss 0.1264 | val_loss 0.0297 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 53s
+2026-10-05 08:23:31,546 INFO train: epoch 24 | train_loss 0.1280 | val_loss 0.0293 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 53s
+2026-10-05 08:24:24,384 INFO train: epoch 25 | train_loss 0.1283 | val_loss 0.0293 | val F1 1.0000 P 1.0000 R 1.0000 AUC 1.0000 | 53s
+2026-10-05 08:24:29,252 INFO train: Best epoch 20 | val_loss 0.0293 | threshold 0.9128 (recall>=0.99) | val {"precision": 1.0, "recall": 0.9914529914529915, "f1": 0.9957081545064378, "roc_auc": 1.0}
+2026-10-05 08:24:29,773 INFO train: Saved runs/efficientnet_b0/best.pt (26.3 min)

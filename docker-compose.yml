@@ -13,11 +13,11 @@ services:
       DD_MAX_UPLOAD_MB: "10"
       DD_MAX_BATCH_SIZE: "16"
       # DD_THRESHOLD: "0.5"        # override the validation-tuned threshold if the business asks for it
-      WEB_CONCURRENCY: "2"
+      WEB_CONCURRENCY: "1"        # one worker per container; scale with replicas
       DD_INTRA_OP_THREADS: "2"
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: "4"
+          cpus: "2"
           memory: 1G

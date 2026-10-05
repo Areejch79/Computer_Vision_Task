@@ -98,7 +98,7 @@ def bench_model(name: str, model_dir: Path, ckpt: Path | None, splits_csv: Path,
 
 
 def to_markdown(rows: list[dict]) -> str:
-    hdr = ["model", "runtime", "size_mb", "batch1_p50_ms", "batch1_p95_ms", "batch8_per_image_ms",
+    hdr = ["model", "runtime", "size_mb", "preprocess_ms_p50", "batch1_p50_ms", "batch1_p95_ms", "batch8_per_image_ms",
            "throughput_img_s_batch8", "test_f1", "test_recall", "test_precision", "test_fn", "test_fp"]
     out = ["| " + " | ".join(hdr) + " |", "|" + "---|" * len(hdr)]
     for r in rows:

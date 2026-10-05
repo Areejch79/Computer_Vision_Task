@@ -1,0 +1,43 @@
+{
+  "threshold": 0.2848466746509075,
+  "policy": "min cost (FN=5, FP=1), recall>=0.99",
+  "best_epoch": 16,
+  "val_loss": 0.026656849930683773,
+  "metrics": {
+    "threshold": 0.2848466746509075,
+    "n": 198,
+    "accuracy": 1.0,
+    "balanced_accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "specificity": 1.0,
+    "false_negative_rate": 0.0,
+    "false_positive_rate": 0.0,
+    "per_class": {
+      "normal": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 81
+      },
+      "defective": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 117
+      }
+    },
+    "macro_f1": 1.0,
+    "confusion_matrix": {
+      "tn": 81,
+      "fp": 0,
+      "fn": 0,
+      "tp": 117
+    },
+    "roc_auc": 1.0,
+    "pr_auc": 0.9999999999999999,
+    "ece": 0.02549750478044524
+  },
+  "train_minutes": 24.7
+}

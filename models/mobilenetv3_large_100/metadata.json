@@ -1,8 +1,8 @@
 {
-  "model_name": "efficientnet_b0",
-  "model_version": "efficientnet_b0-20261005-f93e5afb",
+  "model_name": "mobilenetv3_large_100",
+  "model_version": "mobilenetv3_large_100-20261005-3c50e5a2",
   "package_version": "1.0.0",
-  "created_at": "2026-10-05T08:55:01+00:00",
+  "created_at": "2026-10-05T08:52:33+00:00",
   "class_names": [
     "normal",
     "defective"
@@ -37,9 +37,9 @@
       2
     ]
   },
-  "threshold": 0.4616966648027301,
+  "threshold": 0.2848466746509075,
   "threshold_policy": "min cost (FN=5, FP=1), recall>=0.99",
-  "best_epoch": 20,
+  "best_epoch": 16,
   "validation_metrics": {
     "precision": 1.0,
     "recall": 1.0,
@@ -58,8 +58,8 @@
     "defective": 546
   },
   "onnx_opset": 18,
-  "onnx_sha256": "f93e5afbb29e1a943ed6c300c8641ecc51d4961a1d4adcfcac5d2d3ffb653a88",
-  "parity_max_abs_prob_diff": 1.1920928955078125e-07,
+  "onnx_sha256": "3c50e5a2148be7eb1043cd2e3bc278643da08ae1df9dfef16078cd99a3c72b61",
+  "parity_max_abs_prob_diff": 1.4901161193847656e-07,
   "quality_gate": {
     "min_sharpness": 92.99,
     "min_mean_brightness": 107.11,
@@ -69,7 +69,7 @@
   },
   "int8": {
     "file": "model.int8.onnx",
-    "sha256": "8a37c1be48356be114e53ebeea94938c7cc963d4f8301ce6c9aacead5a7642aa",
+    "sha256": "689bdfb58fd26d5a0748ef2bb7e7738b7f56e28fa7284efb18b8a9881f61eba6",
     "calibration_images": 128
   }
 }
