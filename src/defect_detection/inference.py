@@ -15,13 +15,13 @@ import json
 import logging
 import os
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
-from defect_detection.preprocessing import PreprocessConfig, preprocess_pil, softmax
+from defect_detection.preprocessing import PreprocessConfig, image_quality, normalize, resize, softmax, to_model_mode
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +33,8 @@ class Prediction:
     probabilities: dict[str, float]
     defect_probability: float
     threshold: float
-    requires_review: bool  # confidence inside the uncertainty band -> route to a human
+    requires_review: bool  # near the threshold or failed the quality gate -> route to a human
+    quality_warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -65,6 +66,8 @@ class DefectClassifier:
         if not 0.0 < self.threshold < 1.0:
             raise ModelLoadError(f"threshold must be in (0, 1), got {self.threshold}")
         self.review_band = float(review_band)
+        # Optional image-quality gate calibrated on training data at export time (see onnx_export.py).
+        self.quality_gate: dict | None = self.metadata.get("quality_gate")
         self.positive_index = self.class_names.index("defective")
 
         import onnxruntime as ort
@@ -90,20 +93,49 @@ class DefectClassifier:
         dummy = np.zeros((1, 3, self.pp.image_size, self.pp.image_size), dtype=np.float32)
         self.session.run(None, {self.input_name: dummy})
 
+    def _prepare(self, images: list[Image.Image]) -> tuple[np.ndarray, list[list[str]]]:
+        arrays, warnings = [], []
+        for im in images:
+            gray = resize(to_model_mode(im), self.pp.image_size)
+            arrays.append(normalize(gray, self.pp))
+            warnings.append(self.check_quality(gray))
+        return np.stack(arrays), warnings
+
     def preprocess(self, images: list[Image.Image]) -> np.ndarray:
-        return np.stack([preprocess_pil(im, self.pp) for im in images])
+        return self._prepare(images)[0]
+
+    def check_quality(self, gray_resized: Image.Image) -> list[str]:
+        """Flag images outside the conditions the model was validated on.
+
+        The stress tests showed that blur / bad exposure make the model miss defects (it fails towards
+        *normal*), so such images must not be silently passed as normal.
+        """
+        g = self.quality_gate
+        if not g:
+            return []
+        q = image_quality(gray_resized)
+        out = []
+        if q["sharpness"] < g["min_sharpness"]:
+            out.append(f"image_blurry (sharpness {q['sharpness']:.0f} < {g['min_sharpness']:.0f})")
+        if not g["min_mean_brightness"] <= q["mean_brightness"] <= g["max_mean_brightness"]:
+            out.append(f"exposure_out_of_range (mean {q['mean_brightness']:.0f} not in "
+                       f"[{g['min_mean_brightness']:.0f}, {g['max_mean_brightness']:.0f}])")
+        if "max_noise_sigma" in g and q["noise_sigma"] > g["max_noise_sigma"]:
+            out.append(f"image_noisy (noise {q['noise_sigma']:.1f} > {g['max_noise_sigma']:.1f})")
+        return out
 
     def predict_proba(self, batch: np.ndarray) -> np.ndarray:
         logits = self.session.run(None, {self.input_name: batch.astype(np.float32, copy=False)})[0]
         return softmax(logits.astype(np.float64))
 
-    def _decide(self, probs: np.ndarray) -> Prediction:
+    def _decide(self, probs: np.ndarray, warnings: list[str] | None = None) -> Prediction:
         p_def = float(probs[self.positive_index])
         is_def = p_def >= self.threshold
         cls = "defective" if is_def else "normal"
         confidence = float(probs[self.class_names.index(cls)])
         # Uncertainty band around the operating threshold (in probability space).
-        requires_review = abs(p_def - self.threshold) < self.review_band
+        warnings = warnings or []
+        requires_review = abs(p_def - self.threshold) < self.review_band or bool(warnings)
         return Prediction(
             predicted_class=cls,
             confidence=round(confidence, 6),
@@ -111,11 +143,13 @@ class DefectClassifier:
             defect_probability=round(p_def, 6),
             threshold=round(self.threshold, 6),
             requires_review=bool(requires_review),
+            quality_warnings=warnings,
         )
 
     def predict(self, images: list[Image.Image]) -> tuple[list[Prediction], float]:
         """Classify a list of PIL images. Returns predictions and model latency (ms, pre+infer)."""
         t0 = time.perf_counter()
-        probs = self.predict_proba(self.preprocess(images))
+        batch, warnings = self._prepare(images)
+        probs = self.predict_proba(batch)
         latency_ms = (time.perf_counter() - t0) * 1000
-        return [self._decide(p) for p in probs], latency_ms
+        return [self._decide(p, w) for p, w in zip(probs, warnings)], latency_ms

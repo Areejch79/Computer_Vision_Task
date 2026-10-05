@@ -25,7 +25,14 @@ import torch
 from defect_detection import __version__
 from defect_detection.data.dataset import load_split
 from defect_detection.models import build_model
-from defect_detection.preprocessing import PreprocessConfig, preprocess_pil, softmax
+from defect_detection.preprocessing import (
+    PreprocessConfig,
+    image_quality,
+    preprocess_pil,
+    resize,
+    softmax,
+    to_model_mode,
+)
 
 log = logging.getLogger("export")
 OPSET = 18
@@ -47,6 +54,31 @@ def sample_inputs(splits_csv: Path, split: str, pp: PreprocessConfig, n: int, se
     df = load_split(splits_csv, split)
     df = df.sample(n=min(n, len(df)), random_state=seed)
     return np.stack([preprocess_pil(Image.open(p), pp) for p in df.abs_path])
+
+
+def calibrate_quality_gate(splits_csv: Path, pp: PreprocessConfig, sharpness_factor: float = 0.7,
+                           brightness_margin: float = 15.0) -> dict:
+    """Derive image-quality limits from the *training* distribution.
+
+    min_sharpness = 0.7 x the 0.5th percentile of training sharpness (blur radius >= 2 falls below it,
+    which is where the stress test shows the first missed defects); exposure limits = training
+    0.5 / 99.5 percentiles of mean brightness +- a margin; max_noise_sigma = 2 x the 99.5th percentile
+    of the training noise estimate (noise std >= 20 exceeds it; misses start at std 30).
+    """
+    from PIL import Image
+
+    df = load_split(splits_csv, "train")
+    qs = [image_quality(resize(to_model_mode(Image.open(p)), pp.image_size)) for p in df.abs_path]
+    sharp = np.array([q["sharpness"] for q in qs])
+    bright = np.array([q["mean_brightness"] for q in qs])
+    noise = np.array([q["noise_sigma"] for q in qs])
+    return {
+        "min_sharpness": round(float(np.percentile(sharp, 0.5) * sharpness_factor), 2),
+        "min_mean_brightness": round(float(np.percentile(bright, 0.5) - brightness_margin), 2),
+        "max_mean_brightness": round(float(np.percentile(bright, 99.5) + brightness_margin), 2),
+        "max_noise_sigma": round(float(np.percentile(noise, 99.5) * 2.0), 3),
+        "calibrated_on": f"{len(df)} training images",
+    }
 
 
 def sha256(path: Path) -> str:
@@ -109,6 +141,7 @@ def export(ckpt_path: Path, out_dir: Path, splits_csv: Path, int8: bool = False)
         "onnx_opset": OPSET,
         "onnx_sha256": sha256(onnx_path),
         "parity_max_abs_prob_diff": max_diff,
+        "quality_gate": calibrate_quality_gate(splits_csv, pp),
     }
 
     if int8:

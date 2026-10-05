@@ -64,6 +64,22 @@ def preprocess_pil(img: Image.Image, cfg: PreprocessConfig) -> np.ndarray:
     return normalize(resize(to_model_mode(img), cfg.image_size), cfg)
 
 
+def image_quality(gray_resized: Image.Image) -> dict[str, float]:
+    """Cheap image-quality statistics on the model-resolution grayscale image.
+
+    * ``sharpness``: variance of the Laplacian (drops sharply with defocus / motion blur)
+    * ``mean_brightness``: global exposure
+    * ``noise_sigma``: Immerkaer's fast noise-variance estimator (rises with sensor noise / gain)
+    """
+    a = np.asarray(gray_resized, dtype=np.float32)
+    lap = -4 * a[1:-1, 1:-1] + a[:-2, 1:-1] + a[2:, 1:-1] + a[1:-1, :-2] + a[1:-1, 2:]
+    # 3x3 kernel [[1,-2,1],[-2,4,-2],[1,-2,1]] cancels image structure up to 2nd order, leaving noise.
+    m = (a[:-2, :-2] - 2 * a[:-2, 1:-1] + a[:-2, 2:] - 2 * a[1:-1, :-2] + 4 * a[1:-1, 1:-1] - 2 * a[1:-1, 2:]
+         + a[2:, :-2] - 2 * a[2:, 1:-1] + a[2:, 2:])
+    noise = float(np.sqrt(np.pi / 2) * np.abs(m).mean() / 6)
+    return {"sharpness": float(lap.var()), "mean_brightness": float(a.mean()), "noise_sigma": noise}
+
+
 def load_image_bytes(data: bytes) -> Image.Image:
     """Decode bytes into a fully-loaded PIL image (raises on corrupt / truncated data)."""
     with Image.open(io.BytesIO(data)) as probe:

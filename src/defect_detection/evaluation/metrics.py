@@ -65,28 +65,39 @@ def compute_metrics(y_true: np.ndarray, p_def: np.ndarray, threshold: float = 0.
     }
 
 
-def select_threshold(y_true: np.ndarray, p_def: np.ndarray, target_recall: float | None) -> tuple[float, str]:
-    """Choose the decision threshold on the *validation* set.
+def select_threshold(y_true: np.ndarray, p_def: np.ndarray, target_recall: float | None = 0.99,
+                     fn_cost: float = 5.0, fp_cost: float = 1.0) -> tuple[float, str]:
+    """Choose the decision threshold on the *validation* set (never on test).
 
-    Policy: the **highest** threshold whose recall on defective parts is >= ``target_recall``
-    (i.e. the fewest false alarms subject to a defect-escape budget). Falls back to the
-    F1-optimal threshold if ``target_recall`` is None.
+    Policy (cost-sensitive with a safety constraint):
+
+    1. Candidate thresholds are the mid-points between consecutive distinct scores, so a threshold
+       never sits exactly on a validation sample.
+    2. Keep candidates whose defect recall >= ``target_recall`` (defect-escape budget); if none
+       meets it, keep all.
+    3. Pick the minimum expected cost ``fn_cost * FN + fp_cost * FP`` – a missed defect is assumed
+       ``fn_cost/fp_cost`` times as expensive as a false alarm.
+    4. Ties (common on small, well-separated validation sets) are broken by the *largest gap*
+       between neighbouring scores, i.e. the threshold with the biggest safety margin on both sides.
     """
     y_true = np.asarray(y_true).astype(int)
     p_def = np.asarray(p_def, dtype=float)
-    candidates = np.unique(np.concatenate([p_def, [0.5]]))
-    best_t, best_f1 = 0.5, -1.0
-    for t in candidates:
-        m = compute_metrics(y_true, p_def, t)
-        if m["f1"] > best_f1:
-            best_t, best_f1 = float(t), m["f1"]
-    if target_recall is None:
-        return best_t, "max_f1"
-    ok = [float(t) for t in candidates if compute_metrics(y_true, p_def, t)["recall"] >= target_recall]
-    if not ok:
-        return best_t, "max_f1 (target recall unreachable)"
-    # Put the threshold half-way to the next lower score to avoid sitting exactly on a sample.
-    t = max(ok)
-    lower = p_def[p_def < t]
-    t_mid = float((t + lower.max()) / 2) if lower.size else t
-    return t_mid, f"recall>={target_recall}"
+    s = np.unique(np.concatenate([[0.0, 1.0], p_def]))
+    mids = (s[:-1] + s[1:]) / 2
+    gaps = s[1:] - s[:-1]
+    n_pos = max(int(y_true.sum()), 1)
+    rows = []
+    for t, g in zip(mids, gaps):
+        pred = p_def >= t
+        fn = int(((~pred) & (y_true == 1)).sum())
+        fp = int((pred & (y_true == 0)).sum())
+        rows.append((t, g, 1 - fn / n_pos, fn_cost * fn + fp_cost * fp))
+    feasible = [r for r in rows if target_recall is None or r[2] >= target_recall]
+    policy = f"min cost (FN={fn_cost:g}, FP={fp_cost:g})"
+    if target_recall is not None:
+        policy += f", recall>={target_recall}"
+    if not feasible:
+        feasible, policy = rows, policy + " (recall target unreachable)"
+    best_cost = min(r[3] for r in feasible)
+    t, *_ = max((r for r in feasible if r[3] == best_cost), key=lambda r: r[1])
+    return float(t), policy

@@ -33,7 +33,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 from defect_detection.data.dataset import load_split
 from defect_detection.evaluation.metrics import compute_metrics
 from defect_detection.inference import DefectClassifier
-from defect_detection.preprocessing import to_model_mode
+from defect_detection.preprocessing import resize, to_model_mode
 
 log = logging.getLogger("evaluate")
 BORDER = 20
@@ -136,11 +136,68 @@ PERTURBATIONS = {
 }
 
 
+def _downscale(img: Image.Image, px: int) -> Image.Image:
+    """Simulate a lower-resolution camera: downsample to ``px`` and back to the original size."""
+    w, h = img.size
+    return img.resize((px, px), Image.Resampling.BILINEAR).resize((w, h), Image.Resampling.BILINEAR)
+
+
+# Severity sweeps used to find *where* the model breaks (the test set itself is too easy to show it).
+STRESS = {
+    "gaussian_blur_radius": ([1, 2, 3, 4, 6], lambda im, v, s: im.filter(ImageFilter.GaussianBlur(v))),
+    "brightness_factor": ([0.4, 0.6, 0.8, 1.2, 1.4, 1.6], lambda im, v, s: ImageEnhance.Brightness(im).enhance(v)),
+    "gaussian_noise_std": ([5, 10, 20, 30, 50], lambda im, v, s: _noise(im, v, s)),
+    "jpeg_quality": ([50, 20, 10, 5], lambda im, v, s: _jpeg(im, v)),
+    "camera_resolution_px": ([256, 192, 128, 96, 64], lambda im, v, s: _downscale(im, v)),
+}
+
+
 def shift_background(img: Image.Image, target_border: float) -> Image.Image:
     """Counterfactual: additive intensity shift so that the background level equals ``target_border``."""
     a = np.asarray(img, dtype=np.float32)
     cur = image_features(img)["border_brightness"]
     return Image.fromarray(np.clip(a + (target_border - cur), 0, 255).astype(np.uint8), mode="L")
+
+
+def run_stress(clf: DefectClassifier, images: list[Image.Image], y: np.ndarray, t: float):
+    out, first_failures = {}, None
+    for name, (levels, fn) in STRESS.items():
+        out[name] = []
+        for v in levels:
+            perturbed = [fn(im, v, i) for i, im in enumerate(images)]
+            pv = batched_proba(clf, perturbed)
+            m = compute_metrics(y, pv, t)
+            flagged = np.array([bool(clf.check_quality(resize(im, clf.pp.image_size))) for im in perturbed])
+            fn_mask = (y == 1) & (pv < t)
+            out[name].append({"level": v, **{k: round(m[k], 4) for k in ("recall", "specificity", "f1")},
+                              "fn": m["confusion_matrix"]["fn"], "fp": m["confusion_matrix"]["fp"],
+                              "quality_flagged_rate": round(float(flagged.mean()), 4),
+                              "fn_not_flagged": int((fn_mask & ~flagged).sum())})
+            if name == "gaussian_blur_radius" and first_failures is None and m["confusion_matrix"]["fn"] > 0:
+                first_failures = (name, v, np.where((y == 1) & (pv < t))[0][:6])
+        log.info("stress %-22s %s", name, [(r["level"], r["f1"]) for r in out[name]])
+    return out, first_failures
+
+
+def plot_stress(stress: dict, out: Path) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, len(stress), figsize=(3.4 * len(stress), 3.2))
+    for ax, (name, rows) in zip(axes, stress.items()):
+        lv = [str(r["level"]) for r in rows]
+        ax.plot(lv, [r["recall"] for r in rows], "o-", label="recall (defects caught)", c="#d1495b")
+        ax.plot(lv, [r["specificity"] for r in rows], "s-", label="specificity (normals passed)", c="#2a78b5")
+        ax.set_ylim(-0.02, 1.02)
+        ax.set_title(name, fontsize=9)
+        ax.tick_params(labelsize=8)
+    axes[0].legend(fontsize=7, loc="lower left")
+    fig.suptitle("Stress test: degradation vs severity (tuned threshold)")
+    fig.tight_layout()
+    fig.savefig(out, dpi=110)
+    plt.close(fig)
 
 
 # --------------------------------------------------------------------------------------------
@@ -353,6 +410,18 @@ def evaluate(model_dir: Path, out_dir: Path, splits_csv: Path, checkpoint: Path 
             rob[name].update({"fn": mm["confusion_matrix"]["fn"], "fp": mm["confusion_matrix"]["fp"]})
             log.info("robustness %-24s F1 %.4f R %.4f P %.4f", name, mm["f1"], mm["recall"], mm["precision"])
         results["robustness_at_tuned_threshold"] = rob
+        stress, first_failures = run_stress(clf, images, y, t)
+        results["stress_test"] = stress
+        plot_stress(stress, fig_dir / "stress_curves.png")
+        # Which defects are lost first when the image gets blurrier? (typically the smallest defects)
+        if first_failures:
+            name, level, idx = first_failures
+            rows = df.iloc[idx].copy()
+            rows["p_defective"] = df.p_defective.iloc[idx]
+            error_gallery(rows, f"First failures under {name}={level} (shown clean, with Grad-CAM)",
+                          fig_dir / "first_failures_under_stress.png", checkpoint, clf.pp.image_size)
+            results["first_failures_under_stress"] = {"condition": f"{name}={level}",
+                                                      "images": df.path.iloc[idx].tolist()}
 
     # ---------------- error analysis -----------------
     errs = df[df.outcome.isin(["FP", "FN"])].copy()
@@ -375,6 +444,11 @@ def evaluate(model_dir: Path, out_dir: Path, splits_csv: Path, checkpoint: Path 
                   checkpoint, clf.pp.image_size)
     error_gallery(errs[errs.outcome == "FP"], "False positives (false alarms)", fig_dir / "false_positives.png",
                   checkpoint, clf.pp.image_size)
+    # Hardest correctly classified parts (smallest margin to the threshold) per class.
+    hardest = pd.concat([df[df.label == 1].nsmallest(3, "p_defective"), df[df.label == 0].nlargest(3, "p_defective")])
+    error_gallery(hardest, "Hardest test images (closest to the threshold)", fig_dir / "hardest_examples.png",
+                  checkpoint, clf.pp.image_size)
+    results["hardest_examples"] = hardest[["path", "class_name", "p_defective"]].round(4).to_dict("records")
     # Grad-CAM sanity check on a few confident true positives: does the model look at the part?
     tps = df[df.outcome == "TP"].sort_values("p_defective", ascending=False).iloc[::15].head(4)
     error_gallery(tps, "Sample true positives (sanity check)", fig_dir / "true_positives_gradcam.png", checkpoint,
@@ -439,6 +513,19 @@ def render_markdown(r: dict, group_stats: pd.DataFrame) -> str:
         for k, v in r["robustness_at_tuned_threshold"].items():
             lines.append(f"| {k} | {v['precision']:.4f} | {v['recall']:.4f} | {v['f1']:.4f} | "
                          f"{v.get('fp', cm['fp'])} | {v.get('fn', cm['fn'])} |")
+    if "stress_test" in r:
+        lines += ["", "## Stress test (severity sweeps)", "",
+                  "| perturbation | level | recall | specificity | F1 | FN | FP | quality-gate flagged "
+                  "| FN not flagged |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for name, rows in r["stress_test"].items():
+            for row in rows:
+                lines.append(f"| {name} | {row['level']} | {row['recall']:.4f} | {row['specificity']:.4f} | "
+                             f"{row['f1']:.4f} | {row['fn']} | {row['fp']} | "
+                             f"{row.get('quality_flagged_rate', 0):.0%} | {row.get('fn_not_flagged', '–')} |")
+    if "hardest_examples" in r:
+        lines += ["", "## Hardest test images", ""]
+        lines += [f"- `{h['path']}` ({h['class_name']}) P(def)={h['p_defective']:.4f}" for h in r["hardest_examples"]]
     return "\n".join(lines) + "\n"
 
 

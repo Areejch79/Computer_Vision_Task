@@ -29,8 +29,11 @@ augmentation:
 imbalance:
   # weighted_loss | weighted_sampler | none
   strategy: weighted_loss
-  # Decision threshold is tuned on the validation set: highest threshold with defect recall >= target.
+  # Decision threshold is tuned on the validation set (see metrics.select_threshold):
+  # minimise fn_cost*FN + fp_cost*FP subject to defect recall >= target_recall, ties -> widest margin.
   target_recall: 0.99
+  fn_cost: 5.0   # a missed defect (escape) is assumed 5x as costly as a false alarm (re-inspection)
+  fp_cost: 1.0
 
 train:
   batch_size: 32

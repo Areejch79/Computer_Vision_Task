@@ -217,31 +217,53 @@ def train(cfg: dict) -> Path:
     # Reload best weights, tune the decision threshold on validation, and finalise the checkpoint.
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     model.load_state_dict(ckpt["model_state"])
-    y_val, p_val, val_loss = predict(model, val_loader, device)
-    threshold, policy = select_threshold(y_val, p_val, cfg["imbalance"].get("target_recall"))
-    val_metrics = compute_metrics(y_val, p_val, threshold)
-    log.info("Best epoch %d | val_loss %.4f | threshold %.4f (%s) | val %s", best_epoch, val_loss, threshold,
-             policy, json.dumps({k: val_metrics[k] for k in ("precision", "recall", "f1", "roc_auc")}))
     ckpt.update({
         "class_names": list(CLASS_NAMES),
         "image_size": pp.image_size,
         "mean": list(pp.mean),
         "std": list(pp.std),
-        "threshold": threshold,
-        "threshold_policy": policy,
         "best_epoch": best_epoch,
-        "val_metrics": val_metrics,
         "train_class_counts": counts.tolist(),
         "train_minutes": train_minutes,
     })
-    torch.save(ckpt, ckpt_path)
-    (run_dir / "val_metrics.json").write_text(json.dumps(
-        {"threshold": threshold, "policy": policy, "best_epoch": best_epoch, "metrics": val_metrics,
-         "train_minutes": train_minutes}, indent=2))
+    tune_threshold(model, ckpt, cfg, val_loader, device, ckpt_path)
     plot_history(pd.DataFrame(history), run_dir / "training_curves.png", best_epoch)
     log.info("Saved %s (%.1f min)", ckpt_path, train_minutes)
     logging.getLogger().removeHandler(file_handler)
     return ckpt_path
+
+
+def tune_threshold(model: nn.Module, ckpt: dict, cfg: dict, val_loader: DataLoader, device: torch.device,
+                   ckpt_path: Path) -> float:
+    """Select the decision threshold on validation and store it (with val metrics) in the checkpoint."""
+    y_val, p_val, val_loss = predict(model, val_loader, device)
+    icfg = cfg["imbalance"]
+    threshold, policy = select_threshold(y_val, p_val, icfg.get("target_recall"), float(icfg.get("fn_cost", 5.0)),
+                                         float(icfg.get("fp_cost", 1.0)))
+    val_metrics = compute_metrics(y_val, p_val, threshold)
+    log.info("Best epoch %d | val_loss %.4f | threshold %.4f (%s) | val %s", ckpt["best_epoch"], val_loss, threshold,
+             policy, json.dumps({k: val_metrics[k] for k in ("precision", "recall", "f1", "roc_auc")}))
+    ckpt.update({"threshold": threshold, "threshold_policy": policy, "val_metrics": val_metrics})
+    torch.save(ckpt, ckpt_path)
+    (ckpt_path.parent / "val_metrics.json").write_text(json.dumps(
+        {"threshold": threshold, "policy": policy, "best_epoch": ckpt["best_epoch"], "val_loss": val_loss,
+         "metrics": val_metrics, "train_minutes": ckpt.get("train_minutes")}, indent=2))
+    return threshold
+
+
+def retune_only(cfg: dict) -> None:
+    """Re-select the threshold of an existing checkpoint (e.g. after changing costs) without retraining."""
+    from defect_detection.export.onnx_export import load_checkpoint_model
+
+    ckpt_path = Path(cfg["output_dir"]) / cfg["run_name"] / "best.pt"
+    model, ckpt = load_checkpoint_model(ckpt_path)
+    pp = PreprocessConfig(image_size=int(ckpt["image_size"]))
+    val_df = load_split(Path(cfg["data"]["splits_csv"]), "val", Path(cfg["data"].get("root", ".")))
+    if cfg["data"].get("simulate_defect_prevalence"):
+        val_df = simulate_prevalence(val_df, float(cfg["data"]["simulate_defect_prevalence"]), cfg["seed"])
+    loader = DataLoader(DefectDataset(val_df, EvalTransform(pp), cache=False), batch_size=64)
+    ckpt["config"]["imbalance"] = cfg["imbalance"]
+    tune_threshold(model, ckpt, cfg, loader, torch.device("cpu"), ckpt_path)
 
 
 def plot_history(h: pd.DataFrame, out: Path, best_epoch: int) -> None:
@@ -282,9 +304,12 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE", help="override config values")
+    ap.add_argument("--retune-only", action="store_true",
+                    help="only re-select the decision threshold of the existing checkpoint")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    train(load_config(args.config, args.set))
+    cfg = load_config(args.config, args.set)
+    retune_only(cfg) if args.retune_only else train(cfg)
 
 
 if __name__ == "__main__":

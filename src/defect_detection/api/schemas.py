@@ -15,14 +15,16 @@ class PredictionResponse(BaseModel):
     probabilities: dict[str, float]
     defect_probability: float = Field(..., ge=0, le=1)
     threshold: float = Field(..., description="decision threshold on defect_probability")
-    requires_review: bool = Field(..., description="prediction is close to the threshold; route to manual inspection")
+    requires_review: bool = Field(..., description="close to the threshold or failed the image-quality gate; "
+                                                   "route to manual inspection")
+    quality_warnings: list[str] = Field(default_factory=list, description="image-quality gate findings")
     model_version: str
     inference_ms: float
 
     model_config = {"protected_namespaces": (), "json_schema_extra": {"example": {
         "request_id": "4f1c2b9e8a7d4c3b", "filename": "part_0001.jpeg", "predicted_class": "defective",
         "confidence": 0.9931, "probabilities": {"normal": 0.0069, "defective": 0.9931},
-        "defect_probability": 0.9931, "threshold": 0.31, "requires_review": False,
+        "defect_probability": 0.9931, "threshold": 0.46, "requires_review": False, "quality_warnings": [],
         "model_version": "efficientnet_b0-20261005-1a2b3c4d", "inference_ms": 21.4}}}
 
 
