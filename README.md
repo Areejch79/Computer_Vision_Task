@@ -234,9 +234,28 @@ handles imbalance at three levels:
 Defects were sub-sampled to 10 % of train and val (360 normal / 40 defective), then evaluated on the untouched
 test set. MobileNetV3, 12 epochs ([`scripts/imbalance_ablation.py`](scripts/imbalance_ablation.py)):
 
-ABLATION_TABLE
+| strategy | threshold | recall | precision | F1 | specificity | FN | FP | ROC-AUC |
+|---|---|---|---|---|---|---|---|---|
+| none | 0.5 | 0.9746 | 1.0000 | 0.9871 | 1.0000 | 3 | 0 | 1.0000 |
+| none | 0.246 (tuned) | 0.9915 | 1.0000 | 0.9957 | 1.0000 | 1 | 0 | 1.0000 |
+| weighted_loss | 0.5 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0 | 0 | 1.0000 |
+| weighted_loss | 0.540 (tuned) | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0 | 0 | 1.0000 |
+| weighted_sampler | 0.5 | 0.9915 | 1.0000 | 0.9957 | 1.0000 | 1 | 0 | 1.0000 |
+| weighted_sampler | 0.491 (tuned) | 0.9915 | 1.0000 | 0.9957 | 1.0000 | 1 | 0 | 1.0000 |
 
-ABLATION_TAKEAWAY
+**Takeaways:**
+
+* **Imbalance hurts the *decision*, not the *ranking*.** Without any handling, ROC-AUC stays 1.0, but the model is
+  biased towards the majority class: mean P(defective) on true defects drops from 0.98 to 0.92, and at the default
+  0.5 threshold it **misses 3 defects**.
+* **Threshold moving alone recovers most of it.** The tuned threshold drops to 0.25, and misses go from 3 to 1.
+* **The class-weighted loss gives 0 errors at either threshold.** It fixes the bias inside the model, so the tuned
+  threshold stays near 0.5 (0.54), which is the most stable operating point when the line's defect rate drifts.
+  The balanced sampler is in between (1 miss) because it repeats the same 40 defects ~5× per epoch and overfits
+  them.
+* **Shipped configuration:** weighted loss **plus** a validation-tuned, cost-based threshold, i.e. both levers.
+* *Caveat:* these differences are 1–3 images from a single seed, and the 10 % validation set holds only 9 defects,
+  so treat this as directional evidence. The mechanism (bias, not separability) is the robust finding.
 
 ---
 

@@ -3,7 +3,7 @@ PY ?= python
 PRIMARY ?= efficientnet_b0
 ALT ?= mobilenetv3_large_100
 
-.PHONY: help install data weights prepare train train-alt export evaluate benchmark examples test lint serve \
+.PHONY: help install data weights prepare train train-alt export evaluate benchmark ablation examples test lint serve \
         docker-build docker-run all clean
 
 help:          ## show targets
@@ -39,6 +39,9 @@ benchmark:     ## latency / size / accuracy trade-off table -> reports/benchmark
 	$(PY) -m defect_detection.evaluation.benchmark \
 	  --model $(PRIMARY)=models/$(PRIMARY):runs/$(PRIMARY)/best.pt \
 	  --model $(ALT)=models/$(ALT):runs/$(ALT)/best.pt --out reports/benchmark.json
+
+ablation:      ## class-imbalance ablation at 10 % defect prevalence -> reports/imbalance_ablation.{json,md}
+	$(PY) scripts/imbalance_ablation.py --epochs 12
 
 examples:      ## regenerate examples/ through the API
 	$(PY) scripts/make_examples.py --model-dir models/$(PRIMARY)
