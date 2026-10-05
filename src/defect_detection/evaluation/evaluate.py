@@ -190,7 +190,8 @@ def plot_stress(stress: dict, out: Path) -> None:
         lv = [str(r["level"]) for r in rows]
         ax.plot(lv, [r["recall"] for r in rows], "o-", label="recall (defects caught)", c="#d1495b")
         ax.plot(lv, [r["specificity"] for r in rows], "s-", label="specificity (normals passed)", c="#2a78b5")
-        ax.set_ylim(-0.02, 1.02)
+        lo = min(min(r["recall"] for r in rows), min(r["specificity"] for r in rows))
+        ax.set_ylim(min(0.8, lo - 0.02), 1.01)
         ax.set_title(name, fontsize=9)
         ax.tick_params(labelsize=8)
     axes[0].legend(fontsize=7, loc="lower left")
@@ -320,7 +321,7 @@ def error_gallery(rows: pd.DataFrame, title: str, out: Path, checkpoint: Path | 
         for ax in axes[r]:
             ax.axis("off")
     fig.suptitle(title)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 1 - 0.35 / n))
     fig.savefig(out, dpi=100)
     plt.close(fig)
 

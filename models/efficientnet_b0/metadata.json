@@ -1,0 +1,74 @@
+{
+  "model_name": "efficientnet_b0",
+  "model_version": "efficientnet_b0-20261005-f93e5afb",
+  "package_version": "1.0.0",
+  "created_at": "2026-10-05T08:35:43+00:00",
+  "class_names": [
+    "normal",
+    "defective"
+  ],
+  "positive_class": "defective",
+  "image_size": 256,
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "input": {
+    "name": "input",
+    "shape": [
+      "batch",
+      3,
+      256,
+      256
+    ],
+    "dtype": "float32",
+    "color": "grayscale replicated to 3 channels"
+  },
+  "output": {
+    "name": "logits",
+    "shape": [
+      "batch",
+      2
+    ]
+  },
+  "threshold": 0.4616966648027301,
+  "threshold_policy": "min cost (FN=5, FP=1), recall>=0.99",
+  "best_epoch": 20,
+  "validation_metrics": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "pr_auc": 0.9999999999999999,
+    "confusion_matrix": {
+      "tn": 81,
+      "fp": 0,
+      "fn": 0,
+      "tp": 117
+    }
+  },
+  "train_class_counts": {
+    "normal": 360,
+    "defective": 546
+  },
+  "onnx_opset": 18,
+  "onnx_sha256": "f93e5afbb29e1a943ed6c300c8641ecc51d4961a1d4adcfcac5d2d3ffb653a88",
+  "parity_max_abs_prob_diff": 1.1920928955078125e-07,
+  "quality_gate": {
+    "min_sharpness": 92.99,
+    "min_mean_brightness": 107.11,
+    "max_mean_brightness": 180.83,
+    "calibrated_on": "906 training images"
+  },
+  "int8": {
+    "file": "model.int8.onnx",
+    "sha256": "8a37c1be48356be114e53ebeea94938c7cc963d4f8301ce6c9aacead5a7642aa",
+    "calibration_images": 128
+  }
+}
