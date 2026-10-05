@@ -1,0 +1,30 @@
+flowchart TB
+  subgraph OFF["① Offline – training pipeline (PyTorch + timm)"]
+    direction LR
+    A[("Raw images<br/>ok_front / def_front")] --> B["prepare.py<br/>EDA · file validation<br/>MD5 + dHash near-dup groups"]
+    B --> C[("splits.csv<br/>stratified group split<br/>70 / 15 / 15")]
+    C --> D["train.py<br/>EfficientNet-B0 (ImageNet)<br/>augmentation · weighted CE<br/>head warm-up → fine-tune"]
+    D --> E["Threshold tuning<br/>on validation<br/>(defect recall ≥ 0.99)"]
+    E --> F["onnx_export.py<br/>ONNX FP32 / INT8<br/>parity check"]
+    F --> G["evaluate.py · benchmark.py<br/>test metrics · CIs · FP/FN<br/>Grad-CAM · robustness · latency"]
+  end
+
+  OFF ==>|"export"| H[("Versioned model artefact<br/>model.onnx + metadata.json<br/>threshold · preprocessing · version")]
+
+  subgraph ON["② Online – inference service (Docker image, ONNX Runtime, no PyTorch)"]
+    direction LR
+    I["FastAPI / Uvicorn<br/>request-id middleware"] --> J["Input validation<br/>content-type · size · decode<br/>dimensions · pixel bomb guard"]
+    J --> K["Shared preprocessing<br/>grayscale → 256×256<br/>ImageNet normalisation"]
+    K --> L["ONNX Runtime<br/>CPU session"]
+    L --> M["Decision<br/>P(defective) ≥ threshold<br/>confidence · requires_review"]
+    I -.-> N["Ops: JSON logs<br/>/metrics (Prometheus)<br/>/health · /ready"]
+  end
+
+  H ==>|"baked into image"| ON
+
+  subgraph LINE["③ Production line"]
+    direction LR
+    CAM["Line camera / MES client"] -- "requires_review = true<br/>or defective" --> HUM["Manual re-inspection<br/>/ reject bin"]
+  end
+
+  LINE <==>|"POST /predict (image) → {predicted_class, confidence, requires_review}"| ON

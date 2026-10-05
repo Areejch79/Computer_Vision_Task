@@ -1,0 +1,48 @@
+# Primary model. See README "Model selection" for the reasoning.
+run_name: efficientnet_b0
+seed: 42
+
+data:
+  splits_csv: data/splits.csv
+  root: .
+  cache_images: true
+  # Set e.g. 0.10 to sub-sample defects in *train* to 10 % prevalence (imbalance ablation).
+  simulate_defect_prevalence: null
+
+model:
+  name: efficientnet_b0
+  pretrained: true
+  weights_path: weights/efficientnet_b0_ra-3dd342df.pth   # null -> download from HF hub via timm
+  drop_rate: 0.3
+
+preprocess:
+  image_size: 256          # 512 px source; 256 keeps pinholes visible while staying CPU friendly
+
+augmentation:
+  crop_scale_min: 0.85
+  brightness: 0.35
+  contrast: 0.35
+  blur_p: 0.2
+  noise_p: 0.2
+  noise_std: 0.03
+
+imbalance:
+  # weighted_loss | weighted_sampler | none
+  strategy: weighted_loss
+  # Decision threshold is tuned on the validation set: highest threshold with defect recall >= target.
+  target_recall: 0.99
+
+train:
+  batch_size: 32
+  epochs: 25
+  freeze_epochs: 2          # linear-probe warm-up of the new head before full fine-tuning
+  lr: 1.0e-3                # head LR
+  backbone_lr_mult: 0.3     # backbone LR = lr * mult (discriminative fine-tuning)
+  weight_decay: 1.0e-4
+  label_smoothing: 0.05
+  warmup_epochs: 1
+  early_stopping_patience: 7
+  num_workers: 4
+  device: auto              # auto | cpu | cuda | mps
+
+output_dir: runs

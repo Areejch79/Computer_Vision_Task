@@ -1,0 +1,82 @@
+{
+  "n_images": 1300,
+  "unreadable_files": [],
+  "class_counts": {
+    "defective": 781,
+    "normal": 519
+  },
+  "class_ratio_defective": 0.6008,
+  "image_sizes": {
+    "512x512": 1300
+  },
+  "modes": {
+    "RGB": 1300
+  },
+  "all_rgb_files_have_identical_channels": true,
+  "exact_duplicates": 0,
+  "near_duplicate_groups": 37,
+  "images_in_near_duplicate_groups": 91,
+  "near_dup_hamming_threshold": 10,
+  "split_counts": {
+    "train": {
+      "defective": 546,
+      "normal": 360
+    },
+    "val": {
+      "defective": 117,
+      "normal": 81
+    },
+    "test": {
+      "defective": 118,
+      "normal": 78
+    }
+  },
+  "per_class_stats": {
+    "defective": {
+      "mean_brightness": {
+        "mean": 138.56,
+        "std": 8.57
+      },
+      "border_brightness": {
+        "mean": 165.93,
+        "std": 27.02
+      },
+      "std_brightness": {
+        "mean": 59.78,
+        "std": 5.52
+      },
+      "sharpness": {
+        "mean": 167.8,
+        "std": 73.16
+      },
+      "file_kb": {
+        "mean": 25.29,
+        "std": 2.39
+      }
+    },
+    "normal": {
+      "mean_brightness": {
+        "mean": 148.95,
+        "std": 9.06
+      },
+      "border_brightness": {
+        "mean": 194.63,
+        "std": 23.3
+      },
+      "std_brightness": {
+        "mean": 62.45,
+        "std": 3.61
+      },
+      "sharpness": {
+        "mean": 143.61,
+        "std": 70.46
+      },
+      "file_kb": {
+        "mean": 22.91,
+        "std": 3.37
+      }
+    }
+  },
+  "shortcut_auc_border_brightness": 0.7899,
+  "shortcut_auc_mean_brightness": 0.8012
+}

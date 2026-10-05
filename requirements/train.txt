@@ -1,0 +1,12 @@
+-r serve.txt
+# Training / evaluation / export. For CPU-only machines install torch from
+# https://download.pytorch.org/whl/cpu to avoid pulling CUDA wheels.
+torch>=2.2
+torchvision>=0.17
+timm>=1.0
+onnx>=1.15
+onnxscript>=0.1
+scikit-learn>=1.4
+pandas>=2.1
+matplotlib>=3.8
+pyyaml>=6.0

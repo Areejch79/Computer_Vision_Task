@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODEL_DIR: models/efficientnet_b0
+    image: defect-detection-api:1.0.0
+    ports:
+      - "8000:8000"
+    environment:
+      DD_LOG_LEVEL: INFO
+      DD_MAX_UPLOAD_MB: "10"
+      DD_MAX_BATCH_SIZE: "16"
+      # DD_THRESHOLD: "0.5"        # override the validation-tuned threshold if the business asks for it
+      WEB_CONCURRENCY: "2"
+      DD_INTRA_OP_THREADS: "2"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 1G

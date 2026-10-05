@@ -1,0 +1,17 @@
+# ---------------------------------------------------------------------------------------------
+# Reproducible training / evaluation environment (CPU PyTorch wheels; swap the index URL for CUDA).
+#   docker build -f docker/Dockerfile.train -t defect-detection-train .
+#   docker run --rm -v $PWD:/workspace defect-detection-train make all
+# ---------------------------------------------------------------------------------------------
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends git curl make && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+COPY requirements ./requirements
+RUN pip install -r requirements/dev.txt
+COPY . .
+RUN pip install --no-deps -e .
+CMD ["make", "all"]

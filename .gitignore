@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.ipynb_checkpoints/
+# data & weights are downloaded by scripts, never committed
+data/raw/
+weights/
+# intermediate training artefacts (final exported models live in models/)
+runs/
+*.pt
+!models/*.pt
+.DS_Store

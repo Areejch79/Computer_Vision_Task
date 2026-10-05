@@ -1,0 +1,4 @@
+-r train.txt
+pytest>=8.0
+httpx>=0.26
+ruff>=0.4

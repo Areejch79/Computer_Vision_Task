@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install (CPU torch)
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements/dev.txt
+          pip install --no-deps -e .
+      - name: Lint
+        run: ruff check src tests scripts
+      - name: Tests
+        run: pytest
+      - name: Smoke-test the shipped model through the CLI
+        run: python -m defect_detection.predict --model-dir models/efficientnet_b0 examples/images
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -f docker/Dockerfile -t defect-detection-api:ci .
+      - name: Run container and smoke test
+        run: |
+          docker run -d --name api -p 8000:8000 defect-detection-api:ci
+          for i in $(seq 1 30); do curl -fsS localhost:8000/ready && break; sleep 2; done
+          ./scripts/smoke_test_api.sh http://localhost:8000
+          docker logs api | tail -20

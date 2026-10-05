@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "defect-detection"
+version = "1.0.0"
+description = "Visual defect detection (normal vs defective) for manufactured parts: training pipeline + ONNX inference API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# Core runtime deps = what the inference API needs (no PyTorch!).
+dependencies = [
+    "numpy>=1.26",
+    "pillow>=10.0",
+    "onnxruntime>=1.17",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.5",
+    "pydantic-settings>=2.1",
+    "prometheus-client>=0.19",
+]
+
+[project.optional-dependencies]
+train = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "timm>=1.0",
+    "onnx>=1.15",
+    "onnxscript>=0.1",
+    "scikit-learn>=1.4",
+    "pandas>=2.1",
+    "matplotlib>=3.8",
+    "pyyaml>=6.0",
+]
+dev = ["pytest>=8.0", "httpx>=0.26", "ruff>=0.4"]
+
+[project.scripts]
+dd-prepare = "defect_detection.data.prepare:main"
+dd-train = "defect_detection.training.train:main"
+dd-evaluate = "defect_detection.evaluation.evaluate:main"
+dd-export = "defect_detection.export.onnx_export:main"
+dd-benchmark = "defect_detection.evaluation.benchmark:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# B008: FastAPI `File(...)` defaults are idiomatic; B905: zip(strict=) not needed for same-length lists.
+ignore = ["B008", "B905"]
