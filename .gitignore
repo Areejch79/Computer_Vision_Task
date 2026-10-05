@@ -5,8 +5,7 @@ __pycache__/
 .venv/
 venv/
 .ipynb_checkpoints/
-# data & weights are downloaded by scripts, never committed
-data/raw/
+# pretrained weights are downloaded by scripts/download_weights.sh (the dataset itself IS committed: data/raw/)
 weights/
 # intermediate training artefacts (final exported models live in models/)
 runs/

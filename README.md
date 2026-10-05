@@ -97,7 +97,7 @@ make test             # 36 unit / API tests
 
 | step | command | output |
 |---|---|---|
-| download data | `make data` | `data/raw/{def_front,ok_front}` (1,300 images) |
+| dataset | already in the repo (`make data` re-downloads it if missing) | `data/raw/{def_front,ok_front}` (1,300 images) |
 | analysis + split | `make prepare` | `data/splits.csv`, `reports/data_analysis.json`, `reports/figures/data/` |
 | ImageNet weights | `make weights` | `weights/*.pth` |
 | train | `make train` / `make train-alt` | `runs/<model>/best.pt`, curves, logs |
@@ -123,8 +123,10 @@ I deliberately used the **1,300 original 512×512 images** and not the better-kn
 That version is an *augmented* copy of the same photos, so splitting it at random puts rotated copies of the same
 part in train and test, which leaks test data into training and inflates the scores.
 
-`scripts/download_data.sh` fetches the images from a public mirror (no credentials). The Kaggle instructions are in
-the script.
+**The full dataset is committed in [`data/raw/`](data/raw)**: `def_front/` (781 defective) and `ok_front/`
+(519 normal), 1,300 JPEGs, 32 MB in total, so the repository is self-contained. To re-download it from scratch,
+`scripts/download_data.sh` fetches the same files from a public mirror (no credentials needed). Instructions for the
+original Kaggle download are in the script.
 
 ### Analysis ([`reports/data_analysis.json`](reports/data_analysis.json), `make prepare`)
 
@@ -524,7 +526,8 @@ quality gate.
 
 ```
 ├── configs/                      # training configs (EfficientNet-B0, MobileNetV3-Large)
-├── data/splits.csv               # committed, reproducible split (raw images are downloaded)
+├── data/raw/{def_front,ok_front}  # the dataset: 1,300 images (32 MB)
+├── data/splits.csv               # committed, reproducible train/val/test split
 ├── docker/Dockerfile             # production API image (ONNX Runtime, no torch)
 ├── docker/Dockerfile.train       # reproducible training environment
 ├── docker-compose.yml
@@ -577,5 +580,6 @@ quality gate.
 ---
 
 **Dataset:** "Casting product image data for quality inspection", Ravirajsinh Dabhi, Kaggle (top-view impeller
-images from PILOT TECHNOCAST, Shapar, Rajkot). The images are not redistributed in this repo except for the
-handful of test-split samples in `examples/`, which are used for demonstration.
+images from PILOT TECHNOCAST, Shapar, Rajkot). The 512×512 images are included in `data/raw/` for reproducibility
+of this assessment, with credit to the original author. Check the Kaggle page for the dataset's licence terms
+before reusing or redistributing them.
