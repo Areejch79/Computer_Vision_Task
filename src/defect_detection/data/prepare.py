@@ -216,7 +216,8 @@ def main(argv: list[str] | None = None) -> None:
             rows.append({"path": str(path.resolve().relative_to(root)), "class_name": cls,
                          "label": CLASS_NAMES.index(cls), **st})
     if not rows:
-        raise SystemExit(f"No images found under {args.raw_dir}. Run scripts/download_data.sh first.")
+        raise SystemExit(f"No images found under {args.raw_dir}. "
+                         "Expected <raw_dir>/def_front and <raw_dir>/ok_front (committed in data/raw/).")
     df = pd.DataFrame(rows)
     H = np.stack(hashes)
     log.info("Indexed %d images (%d unreadable)", len(df), len(bad))

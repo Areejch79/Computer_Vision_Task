@@ -97,7 +97,7 @@ make test             # 36 unit / API tests
 
 | step | command | output |
 |---|---|---|
-| dataset | already in the repo (`make data` re-downloads it if missing) | `data/raw/{def_front,ok_front}` (1,300 images) |
+| dataset | already in the repo | `data/raw/{def_front,ok_front}` (1,300 images) |
 | analysis + split | `make prepare` | `data/splits.csv`, `reports/data_analysis.json`, `reports/figures/data/` |
 | ImageNet weights | `make weights` | `weights/*.pth` |
 | train | `make train` / `make train-alt` | `runs/<model>/best.pt`, curves, logs |
@@ -124,9 +124,9 @@ That version is an *augmented* copy of the same photos, so splitting it at rando
 part in train and test, which leaks test data into training and inflates the scores.
 
 **The full dataset is committed in [`data/raw/`](data/raw)**: `def_front/` (781 defective) and `ok_front/`
-(519 normal), 1,300 JPEGs, 32 MB in total, so the repository is self-contained. To re-download it from scratch,
-`scripts/download_data.sh` fetches the same files from a public mirror (no credentials needed). Instructions for the
-original Kaggle download are in the script.
+(519 normal), 1,300 JPEGs, 32 MB in total, so the repository is self-contained and needs no download step. They are
+the `casting_512x512/` folder of the
+[original Kaggle dataset](https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product).
 
 ### Analysis ([`reports/data_analysis.json`](reports/data_analysis.json), `make prepare`)
 
@@ -535,7 +535,7 @@ quality gate.
 ├── examples/                     # sample images + API responses
 ├── models/<model>/               # deployable artefacts: model.onnx, model.int8.onnx, metadata.json
 ├── reports/                      # data analysis, metrics, error analysis, figures, benchmark, ablation
-├── scripts/                      # data/weights download, examples, imbalance ablation, API smoke test
+├── scripts/                      # weights download, examples, imbalance ablation, API smoke test
 ├── src/defect_detection/
 │   ├── preprocessing.py          # shared train/serve preprocessing + image-quality stats (numpy/PIL only)
 │   ├── inference.py              # ONNX Runtime classifier, threshold, review band, quality gate

@@ -1,9 +1,10 @@
-# End-to-end reproducible pipeline.  `make all` = data -> train -> export -> evaluate -> benchmark.
+# End-to-end reproducible pipeline.  `make all` = prepare -> train -> export -> evaluate -> benchmark.
+# The dataset is committed in data/raw/{def_front,ok_front}.
 PY ?= python
 PRIMARY ?= efficientnet_b0
 ALT ?= mobilenetv3_large_100
 
-.PHONY: help install data weights prepare train train-alt export evaluate benchmark ablation examples test lint serve \
+.PHONY: help install weights prepare train train-alt export evaluate benchmark ablation examples test lint serve \
         docker-build docker-run all clean
 
 help:          ## show targets
@@ -12,13 +13,10 @@ help:          ## show targets
 install:       ## install training + dev dependencies (editable)
 	$(PY) -m pip install -r requirements/dev.txt && $(PY) -m pip install --no-deps -e .
 
-data:          ## download the casting dataset to data/raw
-	./scripts/download_data.sh data/raw
-
 weights:       ## download ImageNet weights to weights/
 	./scripts/download_weights.sh weights
 
-prepare: data  ## EDA + near-duplicate-aware stratified split -> data/splits.csv, reports/data_analysis.json
+prepare:       ## EDA + near-duplicate-aware stratified split -> data/splits.csv, reports/data_analysis.json
 	$(PY) -m defect_detection.data.prepare --raw-dir data/raw --out data/splits.csv
 
 train: weights ## train the primary model (EfficientNet-B0)
